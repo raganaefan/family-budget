@@ -33,11 +33,24 @@ export default function HouseholdSettings() {
       .eq("user_id", user.id)
       .single();
 
-    if (error || !membership) {
+    if (error || !membership?.households) {
       setMessage("Gagal memuat data household");
+      setHousehold(null);
+      setPayday(1);
     } else {
-      setHousehold(membership.households);
-      setPayday(membership.households.payday_start || 1);
+      // NORMALISASI: array -> ambil elemen pertama; kalau objek, pakai langsung
+      const raw = (membership as any).households;
+      const household = Array.isArray(raw) ? raw[0] ?? null : (raw as any);
+
+      if (!household) {
+        setMessage("Household tidak ditemukan");
+        setHousehold(null);
+        setPayday(1);
+        return;
+      }
+
+      setHousehold(household);
+      setPayday((household.payday_start as number | null) ?? 1);
     }
     setLoading(false);
   }, [supabase]);
