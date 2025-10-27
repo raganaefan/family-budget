@@ -75,27 +75,40 @@ export default function NewExpensePage() {
         return;
       }
 
-      const household = membership.households;
+      // NORMALISASI: households bisa array atau objek
+      const rawHouseholds = (membership as any).households;
+      const household = Array.isArray(rawHouseholds)
+        ? rawHouseholds[0]
+        : rawHouseholds;
 
-      // Filter kategori aktif
-      const activeCategories = household.categories.filter(
-        (c: any) => c.active
+      if (!household) {
+        setMessage("Household tidak ditemukan untuk user ini.");
+        setCategories([]);
+        setPaymentSources([]);
+        setLoading(false);
+        return;
+      }
+
+      // Filter kategori aktif (aman dengan optional chaining + default [])
+      const activeCategories = (household.categories ?? []).filter(
+        (c: any) => c?.active
       );
       setCategories(activeCategories);
       if (activeCategories.length > 0) {
         setCategoryId(activeCategories[0].id);
       }
 
-      // Filter sumber aktif (BARU)
-      const activeSources = household.payment_sources.filter(
-        (s: any) => s.active
+      // Filter sumber aktif
+      const activeSources = (household.payment_sources ?? []).filter(
+        (s: any) => s?.active
       );
       setPaymentSources(activeSources);
       if (activeSources.length > 0) {
         setPaymentSourceId(activeSources[0].id);
       }
 
-      setCurrentHousehold(household);
+      setCurrentHousehold(household as Household);
+
       setLoading(false);
     }
     loadInitialData();

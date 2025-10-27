@@ -71,8 +71,17 @@ export default async function ReportsPage({
     return <div>Gagal memuat data household.</div>;
   }
 
-  const household = membership.households;
-  const householdId = household.id;
+  // NORMALISASI: households bisa array atau objek
+  const rawHouseholds = (membership as any).households;
+  const household = Array.isArray(rawHouseholds)
+    ? rawHouseholds[0]
+    : rawHouseholds;
+
+  if (!household) {
+    return <div>Gagal memuat data household.</div>;
+  }
+
+  const householdId = household.id as string;
 
   // 2. LOGIKA BARU - Tentukan bulan default berbasis payday
   let defaultMonthISO: string;

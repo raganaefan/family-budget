@@ -7,6 +7,17 @@ import { format, parseISO } from "date-fns";
 import { id } from "date-fns/locale";
 import { ArrowLeft, Target, PlusCircle, TrendingUp } from "lucide-react";
 
+type SavingsRow = {
+  goal_id: string;
+  goal_name: string;
+  active: boolean;
+  current_amount: number | null;
+  target_amount: number | null;
+  target_date: string | null;
+  remaining_amount: number | null;
+  pct_achieved: number | null;
+};
+
 // Helper (Anda bisa pindahkan ini ke file terpisah /lib/utils.ts)
 function formatCurrency(amount: number | null | undefined) {
   if (amount === null || amount === undefined) return "Rp 0";
@@ -60,22 +71,16 @@ export default async function SavingsPage() {
   const householdId = membership.household_id;
 
   // 2. Panggil RPC Savings Rollup
-  const { data: savingsData, error: rpcError } = await supabase.rpc(
+  const { data: savingsRaw = [], error: rpcError } = await supabase.rpc(
     "get_savings_rollup",
     { p_household_id: householdId }
   );
 
-  if (rpcError) {
-    return (
-      <div className="text-red-500">
-        Gagal memuat data tabungan: {rpcError.message}
-      </div>
-    );
-  }
+  // pastikan terketik:
+  const savingsData: SavingsRow[] = savingsRaw as SavingsRow[];
 
-  // Hitung total tabungan keseluruhan
-  const totalSavedAcrossGoals = savingsData.reduce(
-    (sum, goal) => sum + (goal.current_amount || 0),
+  const totalSavedAcrossGoals = savingsData.reduce<number>(
+    (sum, goal) => sum + (goal.current_amount ?? 0),
     0
   );
 
@@ -158,7 +163,7 @@ export default async function SavingsPage() {
                 <span className="font-medium text-gray-700">
                   {formatCurrency(goal.current_amount)}
                 </span>
-                {goal.target_amount > 0 && (
+                {goal.target_amount != null && goal.target_amount > 0 && (
                   <span> / {formatCurrency(goal.target_amount)}</span>
                 )}
               </p>
@@ -171,16 +176,17 @@ export default async function SavingsPage() {
                 </p>
               )}
             </div>
-            {goal.target_amount > 0 && (
+            {goal.target_amount != null && goal.target_amount > 0 && (
               <div className="border-t border-gray-200 px-5 py-4">
                 <ProgressBar percentage={goal.pct_achieved} />
-                {goal.target_amount > 0 && goal.remaining_amount !== null && (
+                {goal.remaining_amount != null && (
                   <p className="mt-2 text-right text-sm text-gray-600">
                     Kurang: {formatCurrency(goal.remaining_amount)}
                   </p>
                 )}
               </div>
             )}
+
             {/* TODO: Tambahkan tombol Edit/Detail di sini */}
           </div>
         ))}
