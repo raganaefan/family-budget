@@ -27,7 +27,7 @@ export async function middleware(request: NextRequest) {
           response.cookies.set({ name, value, ...options });
         },
         remove(name: string, options) {
-          request.cookies.delete({ name, ...options });
+          request.cookies.delete(name);
           response = NextResponse.next({
             request: {
               headers: request.headers,

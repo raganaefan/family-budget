@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import MonthSelector from "../components/MonthSelector";
 
-
 // Pastikan halaman ini dirender dinamis (opsional, tapi aman)
 export const dynamic = "force-dynamic";
 
@@ -60,7 +59,7 @@ async function LogoutButton() {
 export default async function DashboardPage({
   searchParams,
 }: {
-  // ⬇⬇⬇ Perbaikan utama: searchParams adalah Promise
+  // ⬇⬇⬇ sesuai permintaan: TIDAK diubah
   searchParams: Promise<{ month?: string }>;
 }) {
   // Unwrap dulu
@@ -72,13 +71,13 @@ export default async function DashboardPage({
   } = await supabase.auth.getUser();
   if (!user) return redirect("/login");
 
-  const { data: membership } = await supabase
+  const { data: membership, error: membershipErr } = await supabase
     .from("memberships")
     .select("households(id, name, payday_start)")
     .eq("user_id", user.id)
     .single();
 
-  if (!membership || !membership.households) {
+  if (membershipErr || !membership || !membership.households) {
     return (
       <div className="p-8 text-red-500">
         Gagal memuat data household. Silakan coba login ulang.
@@ -94,8 +93,27 @@ export default async function DashboardPage({
     );
   }
 
-  const household = membership.households;
-  const householdId = household.id;
+  // --- FIX utama: households bisa berupa array ATAU objek tergantung relasi
+  const raw = membership.households as any;
+  const household = Array.isArray(raw) ? raw[0] : raw;
+
+  if (!household) {
+    return (
+      <div className="p-8 text-red-500">
+        Household tidak ditemukan untuk user ini.
+        <form action={LogoutButton} className="mt-4">
+          <button
+            type="submit"
+            className="rounded bg-red-500 px-4 py-2 text-white"
+          >
+            Logout
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  const householdId = household.id as string;
 
   // --- Tentukan bulan default berbasis payday ---
   let defaultMonthISO: string;
@@ -116,7 +134,7 @@ export default async function DashboardPage({
   } else {
     const today = new Date();
     const dayOfMonth = today.getDate();
-    const paydayStart = household.payday_start || 1;
+    const paydayStart = (household.payday_start as number | null) || 1;
     const calendarMonthStart = startOfMonth(today);
 
     const defaultMonthDate =
@@ -147,7 +165,7 @@ export default async function DashboardPage({
     );
   }
 
-  const totals = rollupData.reduce(
+  const totals = (rollupData as any[]).reduce(
     (acc: { budget: number; actual: number }, row: any) => {
       acc.budget += row.budget_amount || 0;
       acc.actual += row.actual_amount || 0;
@@ -282,12 +300,12 @@ export default async function DashboardPage({
           Rincian Kategori - {formattedMonth}
         </h2>
         <ul className="divide-y divide-gray-200">
-          {rollupData.length === 0 && (
+          {(rollupData as any[]).length === 0 && (
             <li className="p-5 text-center text-gray-500">
               Belum ada data untuk bulan ini.
             </li>
           )}
-          {rollupData.map((row: any) => (
+          {(rollupData as any[]).map((row: any) => (
             <li key={row.category_id} className="space-y-3 p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-lg font-medium text-gray-800">
