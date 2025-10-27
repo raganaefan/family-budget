@@ -41,6 +41,7 @@ type ExistingBudget = {
   amount: number;
 };
 
+export const dynamic = "force-dynamic";
 // --- COMPONENT ---
 
 export default function BudgetsPage() {
