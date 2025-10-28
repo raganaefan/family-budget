@@ -104,7 +104,7 @@ export async function inviteMemberAction(
       // Arahkan ke halaman konfirmasi/selamat datang khusus (opsional)
       // redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm-invite`,
       // Atau tetap ke callback biasa jika tidak perlu halaman khusus
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm`,
     });
 
   if (emailError) {
