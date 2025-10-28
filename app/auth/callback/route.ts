@@ -7,49 +7,54 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  // Tetap siapkan redirect ke dashboard sebagai tujuan utama
   const next = searchParams.get("next") ?? "/dashboard";
 
+  // Jika ADA code (alur PKCE, misal dari Magic Link), proses seperti biasa
   if (code) {
-    // --- PERBAIKANNYA DI SINI ---
-    // Kita harus 'await' cookies()
     const cookieStore = await cookies();
-    // --- SELESAI PERBAIKAN ---
-
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
-            // Sekarang cookieStore adalah objek yang sudah di-resolve
             return cookieStore.get(name)?.value;
           },
           set(name: string, value: string, options: CookieOptions) {
             try {
               cookieStore.set({ name, value, ...options });
-            } catch (error) {
-              // Abaikan error jika dipanggil dari Server Component
-            }
+            } catch (error) {}
           },
           remove(name: string, options: CookieOptions) {
             try {
               cookieStore.delete({ name, ...options });
-            } catch (error) {
-              // Abaikan error jika dipanggil dari Server Component
-            }
+            } catch (error) {}
           },
         },
       }
     );
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // BERHASIL via PKCE: Langsung ke dashboard
       return NextResponse.redirect(`${origin}${next}`);
+    } else {
+      // GAGAL tukar code: Log error & ke login dengan error
+      console.error("exchangeCodeForSession failed:", error.message);
+      return NextResponse.redirect(
+        `${origin}/login?error=Gagal menukar kode sesi: ${error.message}`
+      );
     }
   }
 
-  // URL redirect jika terjadi error atau tidak ada code
-  console.error("Error or no code in auth callback:", request.url);
-  return NextResponse.redirect(
-    `${origin}/login?error=Gagal login, silakan coba lagi.`
+  // JIKA TIDAK ADA code (mungkin alur Implicit #access_token dari Invite)
+  // JANGAN langsung redirect ke login.
+  // Redirect saja ke halaman tujuan ('/dashboard').
+  // Biarkan client-side (@supabase/ssr) yang berjalan di browser
+  // mendeteksi #access_token, memvalidasi, dan mengatur cookie sesi.
+  // Middleware akan menangani sisanya.
+  console.log(
+    "No code found in callback URL, attempting client-side session recovery."
   );
+  return NextResponse.redirect(`${origin}${next}`);
 }
