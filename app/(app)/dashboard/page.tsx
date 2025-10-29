@@ -352,7 +352,7 @@ export default async function DashboardPage({
           className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-purple-600 px-6 py-3 text-center font-bold text-white shadow transition-all hover:bg-purple-700"
         >
           <CalendarDays size={20} />
-          Laporan Mingguan
+          Laporan & Grafik
         </Link>
         <Link
           href="/settings"

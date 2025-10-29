@@ -261,7 +261,7 @@ export default function ExpenseForm({ expenseId }: { expenseId: string }) {
             }
             required
             placeholder="50000"
-            step="100"
+            step="1"
             min="0"
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           />
