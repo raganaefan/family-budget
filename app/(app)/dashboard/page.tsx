@@ -255,8 +255,60 @@ export default async function DashboardPage({
         </form>
       </header>
 
-      {/* Ringkasan Total (tetap) */}
-      {/* ... tiga kartu Sisa Anggaran / Total Anggaran / Total Pengeluaran ... */}
+      {/* Ringkasan Total */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        <div className="overflow-hidden rounded-lg bg-white p-5 shadow-lg">
+          <div className="flex items-center">
+            <div className="shrink-0">
+              <Wallet className="h-6 w-6 text-gray-400" />
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dt className="truncate text-sm font-medium text-gray-500">
+                Sisa Anggaran
+              </dt>
+              <dd
+                className={`text-3xl font-semibold ${
+                  totalRemaining < 0 ? "text-red-600" : "text-green-600"
+                }`}
+              >
+                {formatCurrency(totalRemaining)}
+              </dd>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-lg bg-white p-5 shadow-lg">
+          <div className="flex items-center">
+            <div className="shrink-0">
+              <PiggyBank className="h-6 w-6 text-gray-400" />
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dt className="truncate text-sm font-medium text-gray-500">
+                Total Anggaran
+              </dt>
+              <dd className="text-3xl font-semibold text-gray-900">
+                {formatCurrency(totals.budget)}
+              </dd>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-lg bg-white p-5 shadow-lg">
+          <div className="flex items-center">
+            <div className="shrink-0">
+              <ShoppingBag className="h-6 w-6 text-gray-400" />
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dt className="truncate text-sm font-medium text-gray-500">
+                Total Pengeluaran
+              </dt>
+              <dd className="text-3xl font-semibold text-gray-900">
+                {formatCurrency(totals.actual)}
+              </dd>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Aksi */}
       <div className="flex flex-col gap-4 sm:flex-row">
