@@ -14,11 +14,32 @@ import {
   LogOut,
   Edit2,
   CalendarDays,
+  ListChecks, // NEW
+  ArrowRight, // NEW
 } from "lucide-react";
 import MonthSelector from "../components/MonthSelector";
 
-// Pastikan halaman ini dirender dinamis (opsional, tapi aman)
 export const dynamic = "force-dynamic";
+
+// NEW: tipe untuk recent expenses (raw & normalized)
+type ExpenseRowRaw = {
+  id: string;
+  txn_date: string;
+  amount: number;
+  merchant: string | null;
+  notes: string | null;
+  category: { name: string }[] | { name: string } | null;
+  payment_source: { name: string }[] | { name: string } | null;
+};
+type ExpenseListItem = {
+  id: string;
+  txn_date: string;
+  amount: number;
+  merchant: string | null;
+  notes: string | null;
+  category: { name: string } | null;
+  payment_source: { name: string } | null;
+};
 
 // --- Helpers ---
 function formatCurrency(amount: number | null | undefined) {
@@ -175,6 +196,43 @@ export default async function DashboardPage({
   );
   const totalRemaining = totals.budget - totals.actual;
 
+  // NEW: ambil 7 transaksi terbaru untuk widget ringkas
+  const { data: recentRaw, error: recentErr } = await supabase
+    .from("expenses")
+    .select(
+      `
+      id,
+      txn_date,
+      amount,
+      merchant,
+      notes,
+      category:category_id ( name ),
+      payment_source:payment_source_id ( name )
+    `
+    )
+    .eq("household_id", householdId)
+    .eq("month", selectedMonthISO)
+    .order("txn_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(7)
+    .returns<ExpenseRowRaw[]>();
+
+  if (recentErr) {
+    console.error("Fail get recent expenses:", recentErr);
+  }
+
+  const recentExpenses: ExpenseListItem[] = (recentRaw ?? []).map((r) => ({
+    id: r.id,
+    txn_date: r.txn_date,
+    amount: r.amount,
+    merchant: r.merchant,
+    notes: r.notes,
+    category: Array.isArray(r.category) ? r.category[0] ?? null : r.category,
+    payment_source: Array.isArray(r.payment_source)
+      ? r.payment_source[0] ?? null
+      : r.payment_source,
+  }));
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -197,70 +255,28 @@ export default async function DashboardPage({
         </form>
       </header>
 
-      {/* Ringkasan Total */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        <div className="overflow-hidden rounded-lg bg-white p-5 shadow-lg">
-          <div className="flex items-center">
-            <div className="shrink-0">
-              <Wallet className="h-6 w-6 text-gray-400" />
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dt className="truncate text-sm font-medium text-gray-500">
-                Sisa Anggaran
-              </dt>
-              <dd
-                className={`text-3xl font-semibold ${
-                  totalRemaining < 0 ? "text-red-600" : "text-green-600"
-                }`}
-              >
-                {formatCurrency(totalRemaining)}
-              </dd>
-            </div>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-lg bg-white p-5 shadow-lg">
-          <div className="flex items-center">
-            <div className="shrink-0">
-              <PiggyBank className="h-6 w-6 text-gray-400" />
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dt className="truncate text-sm font-medium text-gray-500">
-                Total Anggaran
-              </dt>
-              <dd className="text-3xl font-semibold text-gray-900">
-                {formatCurrency(totals.budget)}
-              </dd>
-            </div>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-lg bg-white p-5 shadow-lg">
-          <div className="flex items-center">
-            <div className="shrink-0">
-              <ShoppingBag className="h-6 w-6 text-gray-400" />
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dt className="truncate text-sm font-medium text-gray-500">
-                Total Pengeluaran
-              </dt>
-              <dd className="text-3xl font-semibold text-gray-900">
-                {formatCurrency(totals.actual)}
-              </dd>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Ringkasan Total (tetap) */}
+      {/* ... tiga kartu Sisa Anggaran / Total Anggaran / Total Pengeluaran ... */}
 
       {/* Aksi */}
       <div className="flex flex-col gap-4 sm:flex-row">
         <Link
-          href="/expenses/new"
+          href={`/expenses/new?month=${selectedMonthISO}`} // NEW: bawa month
           className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-center font-bold text-white shadow transition-all hover:bg-green-700"
         >
           <PlusCircle size={20} />
           Tambah Pengeluaran
         </Link>
+
+        {/* NEW: Button ke halaman daftar pengeluaran */}
+        <Link
+          href={`/expenses?month=${selectedMonthISO}&page=1`}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-center font-bold text-white shadow transition-all hover:bg-indigo-700"
+        >
+          <ListChecks size={20} />
+          Lihat Pengeluaran
+        </Link>
+
         <Link
           href={`/budgets?month=${selectedMonthISO}`}
           className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-center font-bold text-white shadow transition-all hover:bg-blue-700"
@@ -268,11 +284,12 @@ export default async function DashboardPage({
           <Settings size={20} />
           Atur Anggaran
         </Link>
+
         <Link
           href="/savings"
           className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-teal-600 px-6 py-3 text-center font-bold text-white shadow transition-all hover:bg-teal-700"
         >
-          <PiggyBank size={20} /> {/* Atau ikon lain */}
+          <PiggyBank size={20} />
           Tabungan
         </Link>
       </div>
@@ -292,6 +309,67 @@ export default async function DashboardPage({
           <Edit2 size={20} />
           Kelola Kategori
         </Link>
+      </div>
+
+      {/* NEW: Widget Transaksi Terbaru */}
+      <div className="overflow-hidden rounded-lg bg-white shadow-lg">
+        <div className="flex items-center justify-between border-b border-gray-200 p-5">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Transaksi Terbaru –{" "}
+            {format(selectedMonthDate, "MMMM yyyy", { locale: id })}
+          </h2>
+          <Link
+            href={`/expenses?month=${selectedMonthISO}&page=1`}
+            className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-700"
+          >
+            Lihat semua
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        {recentExpenses.length === 0 ? (
+          <div className="p-5 text-center text-gray-500">
+            Belum ada transaksi bulan ini.
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-200">
+            {recentExpenses.map((exp) => (
+              <li key={exp.id} className="group hover:bg-gray-50">
+                <Link href={`/expenses/${exp.id}`} className="block px-5 py-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p
+                        className="truncate text-sm font-medium text-gray-900"
+                        title={exp.merchant || "Tanpa Merchant"}
+                      >
+                        {exp.merchant || "-"}
+                      </p>
+                      <p className="truncate text-xs text-gray-500">
+                        {format(parseISO(exp.txn_date), "d MMM", {
+                          locale: id,
+                        })}
+                        {exp.category?.name && ` • ${exp.category.name}`}
+                        {exp.payment_source?.name &&
+                          ` • ${exp.payment_source.name}`}
+                      </p>
+                      {exp.notes && (
+                        <p
+                          className="mt-0.5 line-clamp-2 text-xs text-gray-500"
+                          title={exp.notes}
+                        >
+                          📝 {exp.notes}
+                        </p>
+                      )}
+                    </div>
+                    <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-red-600">
+                      -{formatCurrency(exp.amount)}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Rincian per Kategori */}

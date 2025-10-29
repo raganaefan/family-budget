@@ -177,8 +177,8 @@ export default function NewExpensePage() {
         setMessage("Offline. Pengeluaran disimpan sebagai draf.");
       }
 
-      // Reset form & kembali ke dashboard
-      setTimeout(() => router.push("/dashboard"), 1000);
+      // Reset form & kembali ke expenses
+      setTimeout(() => router.push("/expenses"), 1000);
     } catch (error: any) {
       setMessage(`Error: ${error.message}`);
       setSubmitting(false);
