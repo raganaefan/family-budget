@@ -76,7 +76,16 @@ export default function ReportsClient(props: ReportsClientProps) {
     locale: localeId,
   });
 
-  // Recharts but tanpa set warna manual (biarkan default)
+  // palet warna lembut tapi kontras
+  const COLORS = [
+    "#2563eb", // biru
+    "#16a34a", // hijau
+    "#f59e0b", // kuning
+    "#ef4444", // merah
+    "#8b5cf6", // ungu
+    "#14b8a6", // teal
+  ];
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-1">
@@ -94,7 +103,7 @@ export default function ReportsClient(props: ReportsClientProps) {
         </div>
       </header>
 
-      {/* Row 1: Tren Bulanan (Line) + Category Breakdown (Bar) */}
+      {/* Row 1: Tren Bulanan + Category Breakdown */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card title="Tren Bulanan (6 bulan terakhir)">
           <div className="h-72">
@@ -105,16 +114,24 @@ export default function ReportsClient(props: ReportsClientProps) {
                   tickFormatter={(d) =>
                     format(parseISO(d), "MMM yy", { locale: localeId })
                   }
+                  tick={{ fontSize: 12 }}
+                  axisLine={{ strokeOpacity: 0.2 }}
+                  tickLine={{ strokeOpacity: 0.2 }}
                 />
-                <YAxis />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  axisLine={{ strokeOpacity: 0.2 }}
+                  tickLine={{ strokeOpacity: 0.2 }}
+                />
                 <Tooltip
+                  wrapperStyle={{ borderRadius: 12 }}
                   labelFormatter={(d) =>
                     format(parseISO(String(d)), "MMMM yyyy", {
                       locale: localeId,
                     })
                   }
                 />
-                <Legend />
+                <Legend wrapperStyle={{ paddingTop: 8 }} />
                 <Line
                   type="monotone"
                   dataKey="budget_amount"
@@ -137,18 +154,32 @@ export default function ReportsClient(props: ReportsClientProps) {
             <ResponsiveContainer>
               <BarChart data={categories}>
                 <XAxis dataKey="category_name" tick={{ fontSize: 12 }} />
-                <YAxis />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  axisLine={{ strokeOpacity: 0.2 }}
+                  tickLine={{ strokeOpacity: 0.2 }}
+                />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="budget_amount" name="Budget" />
-                <Bar dataKey="actual_amount" name="Actual" />
+                <Bar
+                  dataKey="budget_amount"
+                  name="Budget"
+                  fill="#d1d5db"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="actual_amount"
+                  name="Actual"
+                  fill="#2563eb"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
       </div>
 
-      {/* Row 2: Weekly Spending (Bar) + Payment Source (Pie) */}
+      {/* Row 2: Weekly Spending + Payment Source */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card title={`Pengeluaran Mingguan — ${monthLabel}`}>
           <div className="h-72">
@@ -162,9 +193,18 @@ export default function ReportsClient(props: ReportsClientProps) {
                 }))}
               >
                 <XAxis dataKey="label" />
-                <YAxis />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  axisLine={{ strokeOpacity: 0.2 }}
+                  tickLine={{ strokeOpacity: 0.2 }}
+                />
                 <Tooltip />
-                <Bar dataKey="actual_amount" name="Actual" />
+                <Bar
+                  dataKey="actual_amount"
+                  name="Actual"
+                  fill="#16a34a"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -179,19 +219,12 @@ export default function ReportsClient(props: ReportsClientProps) {
                   dataKey="total_amount"
                   nameKey="source_name"
                   outerRadius={110}
-                  // Label custom: tampilkan nama + % jika ada
-                  label={(entry: any) => {
-                    const n = entry?.source_name ?? entry?.name ?? "-";
-                    const p =
-                      typeof entry?.pct_share === "number"
-                        ? ` (${entry.pct_share}%)`
-                        : "";
-                    return `${n}${p}`;
-                  }}
+                  label={(entry: any) => entry.source_name ?? "-"}
                   labelLine
                 >
-                  {/* Alternatif kalau mau: gunakan LabelList, bisa ganti di atas */}
-                  {/* <LabelList dataKey="source_name" position="outside" /> */}
+                  {sources.map((_, i) => (
+                    <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
+                  ))}
                 </Pie>
                 <Tooltip
                   formatter={(value: number, _name: string, props: any) => {
@@ -206,14 +239,14 @@ export default function ReportsClient(props: ReportsClientProps) {
                       : [v, "Total"];
                   }}
                 />
-                <Legend /> {/* supaya ada legenda nama-nama juga */}
+                <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </Card>
       </div>
 
-      {/* Row 3: Top Merchants (Table) */}
+      {/* Row 3: Top Merchants */}
       <Card title={`Top Merchant — ${monthLabel}`}>
         {merchants.length === 0 ? (
           <div className="text-center text-gray-500">Belum ada data.</div>

@@ -196,6 +196,38 @@ export default async function DashboardPage({
   );
   const totalRemaining = totals.budget - totals.actual;
 
+  // --- Routines (badge & widget) ---
+  type RoutineNext = {
+    id: string;
+    name: string;
+    next_date: string;
+    status: "ok" | "due_soon" | "overdue";
+  };
+
+  const { data: dueCountData, error: dueErr } = await supabase.rpc(
+    "routine_due_count",
+    {
+      p_household_id: householdId,
+    }
+  );
+  const routineDueCount = typeof dueCountData === "number" ? dueCountData : 0;
+
+  const { data: nextRoutineRaw } = await supabase
+    .from("routine_tasks_computed")
+    .select("id, name, next_date, status")
+    .eq("household_id", householdId)
+    .order("next_date", { ascending: true })
+    .limit(1)
+    .returns<RoutineNext[]>();
+
+  const nextRoutine = (nextRoutineRaw && nextRoutineRaw[0]) || null;
+
+  function routineStatusClass(s?: string) {
+    if (s === "overdue") return "bg-red-100 text-red-700 ring-red-200";
+    if (s === "due_soon") return "bg-amber-100 text-amber-700 ring-amber-200";
+    return "bg-emerald-100 text-emerald-700 ring-emerald-200";
+  }
+
   // NEW: ambil 7 transaksi terbaru untuk widget ringkas
   const { data: recentRaw, error: recentErr } = await supabase
     .from("expenses")
@@ -330,10 +362,24 @@ export default async function DashboardPage({
         </Link>
 
         <Link
+          href={`/routines`}
+          className="relative flex flex-1 items-center justify-center gap-2 rounded-lg bg-sky-600 px-6 py-3 text-center font-bold text-white shadow transition-all hover:bg-sky-700"
+          title="Catatan Rutin (service AC/motor, dll.)"
+        >
+          <ListChecks size={20} />
+          Catatan Rutin
+          {routineDueCount > 0 && (
+            <span className="absolute -right-2 -top-2 inline-flex min-w-6 items-center justify-center rounded-full bg-white px-1.5 py-0.5 text-xs font-bold text-sky-700 ring-2 ring-sky-600">
+              {routineDueCount}
+            </span>
+          )}
+        </Link>
+
+        <Link
           href={`/budgets?month=${selectedMonthISO}`}
           className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-center font-bold text-white shadow transition-all hover:bg-blue-700"
         >
-          <Settings size={20} />
+          <Edit2 size={20} />
           Atur Anggaran
         </Link>
 
@@ -358,9 +404,84 @@ export default async function DashboardPage({
           href="/settings"
           className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-700 px-6 py-3 text-center font-bold text-white shadow transition-all hover:bg-gray-800"
         >
-          <Edit2 size={20} />
+          <Settings size={20} />
           Kelola Kategori
         </Link>
+      </div>
+
+      {/* NEW: Widget Catatan Rutin */}
+      <div className="overflow-hidden rounded-lg bg-white shadow-lg">
+        <div className="flex items-center justify-between border-b border-gray-200 p-5">
+          <h2 className="text-xl font-semibold text-gray-900">Catatan Rutin</h2>
+          <Link
+            href="/routines"
+            className="inline-flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700"
+            title="Kelola Catatan Rutin"
+          >
+            Kelola
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        <div className="p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-sm text-gray-600">Status:</span>
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${routineStatusClass(
+                nextRoutine?.status
+              )}`}
+            >
+              {nextRoutine?.status === "overdue"
+                ? "Terlambat"
+                : nextRoutine?.status === "due_soon"
+                ? "Segera"
+                : "OK"}
+            </span>
+            {routineDueCount > 0 && (
+              <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
+                {routineDueCount} due
+              </span>
+            )}
+          </div>
+
+          {nextRoutine ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p
+                  className="truncate text-sm font-medium text-gray-900"
+                  title={nextRoutine.name}
+                >
+                  {nextRoutine.name}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Berikutnya:{" "}
+                  <span className="font-medium text-gray-800">
+                    {format(parseISO(nextRoutine.next_date), "d MMM yyyy", {
+                      locale: id,
+                    })}
+                  </span>
+                </p>
+              </div>
+              <Link
+                href="/routines"
+                className="inline-flex items-center rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
+              >
+                Buka
+              </Link>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">
+              Belum ada catatan rutin.{" "}
+              <Link
+                href="/routines"
+                className="font-medium text-sky-600 hover:text-sky-700"
+              >
+                Tambahkan sekarang
+              </Link>
+              .
+            </div>
+          )}
+        </div>
       </div>
 
       {/* NEW: Widget Transaksi Terbaru */}
